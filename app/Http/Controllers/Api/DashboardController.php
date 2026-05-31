@@ -7,9 +7,47 @@ use App\Models\Booking;
 use App\Models\Room;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
+    /**
+     * Future bookings calendar: for each date in range, list room numbers that are booked.
+     * Used to show on dashboard calendar which rooms are booked on which day.
+     */
+    public function futureBookingsCalendar(Request $request): JsonResponse
+    {
+        $from = $request->get('from', Carbon::today()->toDateString());
+        $to = $request->get('to', Carbon::today()->addDays(60)->toDateString());
+        $fromDate = Carbon::parse($from)->startOfDay();
+        $toDate = Carbon::parse($to)->endOfDay();
+        if ($fromDate->gt($toDate)) {
+            return response()->json(['by_date' => []]);
+        }
+        $bookings = Booking::with(['room', 'rooms'])
+            ->whereIn('status', ['confirmed', 'checked_in'])
+            ->where('check_out_date', '>=', $fromDate->toDateString())
+            ->where('check_in_date', '<=', $toDate->toDateString())
+            ->get();
+        $byDate = [];
+        for ($d = $fromDate->copy(); $d->lte($toDate); $d->addDay()) {
+            $dateStr = $d->toDateString();
+            $roomNumbers = [];
+            foreach ($bookings as $b) {
+                $checkIn = $b->check_in_date instanceof \Carbon\Carbon ? $b->check_in_date->toDateString() : $b->check_in_date;
+                $checkOut = $b->check_out_date instanceof \Carbon\Carbon ? $b->check_out_date->toDateString() : $b->check_out_date;
+                $isBooked = $checkIn <= $dateStr && ($checkOut > $dateStr || ($checkIn === $checkOut && $checkOut === $dateStr));
+                if ($isBooked) {
+                    foreach ($b->room_numbers as $rn) {
+                        $roomNumbers[] = $rn;
+                    }
+                }
+            }
+            $byDate[$dateStr] = array_values(array_unique($roomNumbers));
+        }
+        return response()->json(['by_date' => $byDate]);
+    }
+
     public function stats(): JsonResponse
     {
         $today = Carbon::today()->toDateString();

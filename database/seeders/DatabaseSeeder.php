@@ -15,6 +15,11 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        $this->call([
+            RoleSeeder::class,
+            MenuSeeder::class,
+        ]);
+
         // Plain password - User model has 'hashed' cast, so it will auto-hash
         User::updateOrCreate(
             ['email' => 'admin@avguest.com'],
@@ -23,6 +28,7 @@ class DatabaseSeeder extends Seeder
                 'email' => 'admin@avguest.com',
                 'password' => 'password123',
                 'email_verified_at' => now(),
+                'role_id' => \App\Models\Role::where('code', 'admin')->value('id'),
             ]
         );
 
@@ -33,6 +39,7 @@ class DatabaseSeeder extends Seeder
                 'email' => 'demo@hotel.com',
                 'password' => 'Hotel@123',
                 'email_verified_at' => now(),
+                'role_id' => \App\Models\Role::where('code', 'receptionist')->value('id'),
             ]
         );
     }

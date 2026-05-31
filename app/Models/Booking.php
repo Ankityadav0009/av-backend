@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Booking extends Model
 {
@@ -30,6 +31,8 @@ class Booking extends Model
         'notes',
         'checked_in_at',
         'checked_out_at',
+        'created_by',
+        'payment_method',
     ];
 
     protected function casts(): array
@@ -49,6 +52,30 @@ class Booking extends Model
     public function room(): BelongsTo
     {
         return $this->belongsTo(Room::class);
+    }
+
+    public function rooms(): BelongsToMany
+    {
+        return $this->belongsToMany(Room::class, 'booking_rooms')
+            ->withPivot('room_rate')
+            ->withTimestamps();
+    }
+
+    public function getRoomNumbersAttribute(): array
+    {
+        $rooms = $this->rooms;
+        if ($rooms->isNotEmpty()) {
+            return $rooms->pluck('room_number')->all();
+        }
+        if ($this->room) {
+            return [$this->room->room_number];
+        }
+        return [];
+    }
+
+    public function createdByUser(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class, 'created_by');
     }
 
     public static function generateBookingNumber(): string

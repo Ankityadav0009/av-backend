@@ -14,6 +14,7 @@ class Room extends Model
         'status',
         'custom_price',
         'notes',
+        'image_path',
         'is_active',
     ];
 
